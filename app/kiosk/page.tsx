@@ -1,16 +1,18 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Schedule, MediaItem, VideoControl } from '@/types';
+import { Schedule, MediaItemWithAd, VideoControl } from '@/types';
 import ScheduleSlideshow from '@/components/kiosk/ScheduleSlideshow';
 import VideoPlayer from '@/components/kiosk/VideoPlayer';
 import KioskFooter from '@/components/kiosk/KioskFooter';
+import DepartureSlideshow from '@/components/kiosk/DepartureSlideshow';
 
 export default function KioskPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [media, setMedia] = useState<MediaItemWithAd[]>([]);
   const [videoControl, setVideoControl] = useState<VideoControl | null>(null);
   const [settings, setSettings] = useState<any>({});
+  const [kioskId, setKioskId] = useState<string>('default');
   const fullIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const videoControlIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastVideoControlUpdate = useRef<Date | null>(null);
@@ -23,17 +25,22 @@ export default function KioskPage() {
   };
 
   useEffect(() => {
+    // Get kioskId from URL params or use default
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('kioskId') || 'default';
+    setKioskId(id);
+
     // Initial fetch
-    fetchKioskData();
+    fetchKioskData(id);
     
     // Fetch all data every 30 seconds (schedules, media, settings)
     fullIntervalRef.current = setInterval(() => {
-      fetchKioskData();
+      fetchKioskData(id);
     }, 30000);
 
     // Check for video control updates every 1.5 seconds for immediate response
     videoControlIntervalRef.current = setInterval(() => {
-      checkVideoControlUpdate();
+      checkVideoControlUpdate(id);
     }, 1500);
 
     // Auto fullscreen
@@ -48,15 +55,22 @@ export default function KioskPage() {
     };
   }, []);
 
-  const fetchKioskData = async () => {
+  const fetchKioskData = async (id: string = kioskId) => {
     try {
-      const response = await fetch('/api/kiosk');
+      const response = await fetch(`/api/kiosk?kioskId=${id}`);
       const data = await response.json();
       
       console.log('📊 Kiosk data received:', {
         schedulesCount: data.schedules?.length || 0,
         schedules: data.schedules,
         mediaCount: data.media?.length || 0,
+        media: data.media?.map((m: any, idx: number) => ({
+          index: idx,
+          title: m.title,
+          isAd: m.isAd,
+          campaignId: m.adCampaignId,
+        })),
+        adsCount: data.media?.filter((m: any) => m.isAd).length || 0,
       });
       
       setSchedules(data.schedules || []);
@@ -77,9 +91,9 @@ export default function KioskPage() {
     }
   };
 
-  const checkVideoControlUpdate = async () => {
+  const checkVideoControlUpdate = async (id: string = kioskId) => {
     try {
-      const response = await fetch('/api/kiosk');
+      const response = await fetch(`/api/kiosk?kioskId=${id}`);
       const data = await response.json();
       
       // Only update if video control has changed
@@ -142,10 +156,17 @@ export default function KioskPage() {
           <VideoPlayer
             media={media}
             videoControl={videoControl}
-            onControlUpdate={fetchKioskData}
+            onControlUpdate={() => fetchKioskData(kioskId)}
+            kioskId={kioskId}
           />
         </div>
       </main>
+
+      <DepartureSlideshow
+        schedules={schedules}
+        boardingTime={parseInt(settings.boarding_time) || 30}
+        lastCallTime={parseInt(settings.last_call_time) || 5}
+      />
 
       <KioskFooter />
     </div>

@@ -97,12 +97,135 @@ async function migrate() {
       )
     `);
 
-    // Create indexes
+    // Create advertisers table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS advertisers (
+        id SERIAL PRIMARY KEY,
+        company_name VARCHAR(255) NOT NULL,
+        contact_name VARCHAR(255),
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50),
+        address TEXT,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create ad_campaigns table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ad_campaigns (
+        id SERIAL PRIMARY KEY,
+        advertiser_id INTEGER REFERENCES advertisers(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        daily_rate DECIMAL(10, 2) NOT NULL,
+        monthly_rate DECIMAL(10, 2),
+        billing_period VARCHAR(50) DEFAULT 'daily',
+        total_cost DECIMAL(10, 2),
+        priority INTEGER DEFAULT 5,
+        frequency_type VARCHAR(50) DEFAULT 'interval',
+        frequency_value INTEGER,
+        display_type VARCHAR(50) DEFAULT 'mixed',
+        interstitial_interval INTEGER,
+        approved_at TIMESTAMP,
+        approved_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create ad_schedules table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ad_schedules (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+        day_of_week VARCHAR(20),
+        start_time TIME,
+        end_time TIME,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create ad_media table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ad_media (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        source TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'url',
+        duration INTEGER,
+        order_index INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create ad_impressions table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ad_impressions (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+        ad_media_id INTEGER REFERENCES ad_media(id) ON DELETE CASCADE,
+        kiosk_id VARCHAR(255) DEFAULT 'default',
+        impression_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        play_duration INTEGER,
+        completed BOOLEAN DEFAULT false,
+        skipped BOOLEAN DEFAULT false
+      )
+    `);
+
+    // Create ad_revenue table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ad_revenue (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+        date DATE NOT NULL,
+        impressions INTEGER DEFAULT 0,
+        revenue DECIMAL(10, 2) DEFAULT 0,
+        revenue_model VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create indexes for ads tables
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_schedules_days ON schedules USING GIN(days)
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_media_order ON media_playlist(order_index)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_campaigns_status ON ad_campaigns(status)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_campaigns_dates ON ad_campaigns(start_date, end_date)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_campaigns_advertiser ON ad_campaigns(advertiser_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_impressions_campaign ON ad_impressions(campaign_id, impression_time)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_impressions_kiosk ON ad_impressions(kiosk_id, impression_time)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_impressions_media ON ad_impressions(ad_media_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_schedules_campaign ON ad_schedules(campaign_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_media_campaign ON ad_media(campaign_id)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ad_revenue_campaign ON ad_revenue(campaign_id, date)
     `);
 
     // Insert default admin user (password: admin123)
@@ -123,7 +246,10 @@ async function migrate() {
         ('boarding_time', '30'),
         ('last_call_time', '5'),
         ('fade_interval', '5'),
-        ('theme', 'windows-glass')
+        ('theme', 'windows-glass'),
+        ('ads_enabled', 'true'),
+        ('ads_default_priority', '5'),
+        ('ads_interstitial_interval', '3')
       ON CONFLICT (setting_key) DO NOTHING
     `);
 

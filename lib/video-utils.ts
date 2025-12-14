@@ -28,9 +28,21 @@ export function convertYouTubeToEmbed(url: string, loop: boolean = false, volume
 
   if (videoId) {
     // For looping, we need to add playlist parameter with the same video ID
-    const loopParam = loop ? `&loop=1&playlist=${videoId}` : '&loop=0';
-    // Remove mute=1 to enable audio (YouTube requires user interaction for autoplay with sound, but we'll try)
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0${loopParam}&controls=0&modestbranding=1&rel=0`;
+    const loopParam = loop ? `&loop=1&playlist=${videoId}` : '';
+    // YouTube autoplay requirements:
+    // - autoplay=1: Enable autoplay (works better when muted)
+    // - mute=1: Start muted to ensure autoplay works (browsers block autoplay with sound)
+    // - enablejsapi=1: Enable JavaScript API for message events and control
+    // - origin: Required for message API to work
+    // - controls=0: Hide controls for kiosk mode
+    // - modestbranding=1: Reduce YouTube branding
+    // - rel=0: Don't show related videos
+    // - playsinline=1: Play inline on mobile
+    // - iv_load_policy=3: Hide annotations
+    // Note: We start muted because browsers block autoplay with sound
+    // The video will play automatically, and we can try to unmute programmatically
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&enablejsapi=1&origin=${encodeURIComponent(origin)}${loopParam}&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3`;
   }
 
   return null;

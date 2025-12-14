@@ -7,12 +7,15 @@ import ScheduleForm from '@/components/admin/ScheduleForm';
 import ScheduleTable from '@/components/admin/ScheduleTable';
 import MediaPlaylist from '@/components/admin/MediaPlaylist';
 import SystemSettingsPanel from '@/components/admin/SystemSettingsPanel';
+import AdvertiserManagement from '@/components/admin/AdvertiserManagement';
+import CampaignManagement from '@/components/admin/CampaignManagement';
+import AdAnalytics from '@/components/admin/AdAnalytics';
 
 export default function AdminPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
-  const [activeTab, setActiveTab] = useState<'schedules' | 'media' | 'settings'>('schedules');
+  const [activeTab, setActiveTab] = useState<'schedules' | 'media' | 'settings' | 'advertisers' | 'campaigns' | 'analytics'>('schedules');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
@@ -118,6 +121,40 @@ export default function AdminPage() {
               <i className="fas fa-cog mr-3" />
               Settings
             </button>
+            <div className="border-t border-gray-700 my-2" />
+            <button
+              onClick={() => setActiveTab('advertisers')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                activeTab === 'advertisers'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <i className="fas fa-building mr-3" />
+              Advertisers
+            </button>
+            <button
+              onClick={() => setActiveTab('campaigns')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                activeTab === 'campaigns'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <i className="fas fa-bullhorn mr-3" />
+              Campaigns
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                activeTab === 'analytics'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <i className="fas fa-chart-line mr-3" />
+              Ad Analytics
+            </button>
           </div>
 
           <div className="mt-auto">
@@ -171,6 +208,24 @@ export default function AdminPage() {
                   onUpdated={handleSettingsUpdated}
                 />
               )}
+            </div>
+          )}
+
+          {activeTab === 'advertisers' && (
+            <div>
+              <AdvertiserManagement />
+            </div>
+          )}
+
+          {activeTab === 'campaigns' && (
+            <div>
+              <CampaignManagement />
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div>
+              <AdAnalytics />
             </div>
           )}
         </main>

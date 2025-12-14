@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getDayOfWeek, calculateScheduleStatus } from '@/lib/utils';
+import { selectAdsForPlaylist } from '@/lib/ad-utils';
+import { AdCampaign, MediaItemWithAd } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,7 +68,7 @@ export async function GET(request: NextRequest) {
     );
     
     // Map media from snake_case to camelCase
-    const media = mediaResult.rows.map((row) => ({
+    const regularMedia = mediaResult.rows.map((row) => ({
       id: row.id,
       title: row.title,
       source: row.source,
@@ -76,7 +78,7 @@ export async function GET(request: NextRequest) {
       updatedAt: row.updated_at,
     }));
 
-    // Get video control state
+    // Get video control state (needed for ad selection)
     const videoControlResult = await pool.query(
       'SELECT * FROM video_control WHERE kiosk_id = $1',
       [kioskId]
@@ -96,6 +98,122 @@ export async function GET(request: NextRequest) {
         lastUpdated: row.last_updated,
       };
     }
+
+    // Get current video index from video control to track total videos played
+    const currentVideoIndex = videoControl?.currentVideoIndex || 0;
+
+    // Get active campaigns with media and schedules
+    const currentTime = new Date();
+    const campaignsResult = await pool.query(
+      `SELECT 
+        c.*,
+        a.company_name as advertiser_company_name
+      FROM ad_campaigns c
+      LEFT JOIN advertisers a ON c.advertiser_id = a.id
+      WHERE c.status = 'active'
+        AND c.start_date <= $1
+        AND c.end_date >= $1
+      ORDER BY c.priority DESC, c.created_at ASC`,
+      [currentTime]
+    );
+
+    // Fetch media and schedules for each campaign
+    const activeCampaigns: any[] = [];
+    for (const row of campaignsResult.rows) {
+      // Get media for this campaign
+      const mediaResult = await pool.query(
+        'SELECT * FROM ad_media WHERE campaign_id = $1 ORDER BY order_index, created_at ASC',
+        [row.id]
+      );
+
+      // Get schedules for this campaign
+      const schedulesResult = await pool.query(
+        'SELECT * FROM ad_schedules WHERE campaign_id = $1 AND is_active = true',
+        [row.id]
+      );
+
+      activeCampaigns.push({
+        id: row.id,
+        advertiserId: row.advertiser_id,
+        advertiser: row.advertiser_company_name ? {
+          id: row.advertiser_id,
+          companyName: row.advertiser_company_name,
+          status: 'active' as const,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } : undefined,
+        name: row.name,
+        description: row.description,
+        status: row.status,
+        startDate: row.start_date,
+        endDate: row.end_date,
+        dailyRate: parseFloat(row.daily_rate),
+        monthlyRate: row.monthly_rate ? parseFloat(row.monthly_rate) : undefined,
+        billingPeriod: row.billing_period,
+        totalCost: row.total_cost ? parseFloat(row.total_cost) : undefined,
+        priority: row.priority,
+        frequencyType: row.frequency_type,
+        frequencyValue: row.frequency_value,
+        displayType: row.display_type,
+        interstitialInterval: row.interstitial_interval,
+        approvedAt: row.approved_at,
+        approvedBy: row.approved_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        media: mediaResult.rows.map(m => ({
+          id: m.id,
+          campaignId: m.campaign_id,
+          title: m.title,
+          source: m.source,
+          type: m.type,
+          duration: m.duration,
+          orderIndex: m.order_index,
+          createdAt: m.created_at,
+          updatedAt: m.updated_at,
+        })),
+        schedules: schedulesResult.rows.map(s => ({
+          id: s.id,
+          campaignId: s.campaign_id,
+          dayOfWeek: s.day_of_week,
+          startTime: s.start_time,
+          endTime: s.end_time,
+          isActive: s.is_active,
+          createdAt: s.created_at,
+        })),
+      });
+    }
+    
+    // Track total videos played (we'll estimate based on current index)
+    // In a real implementation, you might want to track this separately
+    const totalVideosPlayed = currentVideoIndex;
+
+    // Merge ads with regular media
+    const mergedMedia: MediaItemWithAd[] = await selectAdsForPlaylist(
+      regularMedia,
+      activeCampaigns,
+      currentTime,
+      kioskId,
+      currentVideoIndex,
+      totalVideosPlayed
+    );
+
+    // Debug logging
+    console.log('📺 Media playlist:', {
+      regularMediaCount: regularMedia.length,
+      activeCampaignsCount: activeCampaigns.length,
+      mergedMediaCount: mergedMedia.length,
+      currentVideoIndex,
+      totalVideosPlayed,
+      adsInPlaylist: mergedMedia.filter(m => m.isAd).length,
+      mediaBreakdown: mergedMedia.map((m, idx) => ({
+        index: idx,
+        title: m.title,
+        isAd: m.isAd,
+        campaignId: m.adCampaignId,
+      })),
+    });
+
+    const media = mergedMedia;
 
     // Get system settings
     const systemSettingsResult = await pool.query(
