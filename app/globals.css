@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --primary-color: #0067c0;
+  --secondary-color: #8a8886;
+  --accent-color: #0078d4;
+  --text-primary: #ffffff;
+  --text-secondary: #d2d0ce;
+  --success-color: #107c10;
+  --warning-color: #ffb900;
+  --danger-color: #d13438;
+  --card-bg: rgba(32, 32, 32, 0.6);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  color: var(--text-primary);
+}
+
+.glass-container {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
+.status-badge {
+  @apply px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-ontime {
+  @apply bg-green-600;
+}
+
+.status-boarding {
+  @apply bg-blue-600;
+}
+
+.status-lastcalled {
+  @apply bg-yellow-600 animate-pulse;
+}
+
+.status-departed {
+  @apply bg-gray-600;
+}
+
+.status-delayed {
+  @apply bg-orange-600;
+}
+
+.status-cancelled {
+  @apply bg-red-600 line-through;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-in-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.6s ease-out;
+}
+
+@keyframes scroll-right {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(-33.333%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-scroll-right {
+  animation: scroll-right 60s linear infinite;
+}
+
+.animate-scroll-left {
+  animation: scroll-left 60s linear infinite;
+}
+
