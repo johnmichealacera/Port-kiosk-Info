@@ -74,6 +74,10 @@ export default function VideoPlayer({
       }
       if (newVolume !== volume) {
         setVolume(newVolume);
+        // Apply volume to video element if it exists
+        if (videoRef.current) {
+          videoRef.current.volume = newVolume / 100;
+        }
       }
     }
   }, [videoControl, currentIndex, isLooping, volume]);
@@ -339,6 +343,24 @@ export default function VideoPlayer({
               if (!videoStartTimeRef.current) {
                 videoStartTimeRef.current = Date.now();
               }
+
+              // Unmute YouTube video after it starts playing to enable audio
+              setTimeout(() => {
+                if (iframeRef.current) {
+                  console.log('🔊 Unmuting YouTube video after autoplay started');
+                  iframeRef.current.contentWindow?.postMessage(
+                    '{"event":"command","func":"unMute","args":""}',
+                    'https://www.youtube.com'
+                  );
+                  // Set volume after unmuting
+                  setTimeout(() => {
+                    iframeRef.current?.contentWindow?.postMessage(
+                      `{"event":"command","func":"setVolume","args":[${volume}]}`,
+                      'https://www.youtube.com'
+                    );
+                  }, 100);
+                }
+              }, 500);
               break;
             
             case YT_STATE.PAUSED:
@@ -362,7 +384,7 @@ export default function VideoPlayer({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isCurrentVideoYouTube, isLooping, handleEnded]);
+  }, [isCurrentVideoYouTube, isLooping, handleEnded, volume]);
 
   // YouTube autoplay retry effect
   useEffect(() => {
@@ -455,12 +477,23 @@ export default function VideoPlayer({
               if (video.duration && !isNaN(video.duration)) {
                 videoDurationRef.current = video.duration;
               }
+              // Set volume when metadata loads
+              video.volume = volume / 100;
             }}
             onPlay={() => {
               console.log('▶️ Video started playing');
               if (!videoStartTimeRef.current) {
                 videoStartTimeRef.current = Date.now();
               }
+
+              // Unmute after video starts playing to enable audio while preserving autoplay
+              setTimeout(() => {
+                if (videoRef.current && videoRef.current.muted) {
+                  console.log('🔊 Unmuting video after autoplay started');
+                  videoRef.current.muted = false;
+                  videoRef.current.volume = volume / 100;
+                }
+              }, 500);
             }}
             onPause={() => {
               console.log('⏸️ Video paused');

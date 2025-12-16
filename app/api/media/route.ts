@@ -70,3 +70,32 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { mediaIds } = body; // Array of media IDs in new order
+
+    if (!Array.isArray(mediaIds) || mediaIds.length === 0) {
+      return NextResponse.json({ error: 'Media IDs array is required' }, { status: 400 });
+    }
+
+    // Update order_index for each media item
+    const updatePromises = mediaIds.map((id, index) =>
+      pool.query(
+        'UPDATE media_playlist SET order_index = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [index + 1, id]
+      )
+    );
+
+    await Promise.all(updatePromises);
+
+    return NextResponse.json({ message: 'Media order updated successfully' });
+  } catch (error) {
+    console.error('Error reordering media:', error);
+    return NextResponse.json(
+      { error: 'Failed to reorder media' },
+      { status: 500 }
+    );
+  }
+}
+

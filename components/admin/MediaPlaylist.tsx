@@ -1,8 +1,198 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MediaItem } from '@/types';
 import { getVideoThumbnail, isYouTubeUrl, isDirectVideoUrl } from '@/lib/video-utils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableMediaCardProps {
+  item: MediaItem;
+  index: number;
+  playingIndex: number | null;
+  isPlaying: boolean;
+  deletingId: number | null;
+  onPlay: (index: number) => void;
+  onDelete: (id: number) => void;
+}
+
+function SortableMediaCard({
+  item,
+  index,
+  playingIndex,
+  isPlaying,
+  deletingId,
+  onPlay,
+  onDelete,
+}: SortableMediaCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const thumbnailUrl = getVideoThumbnail(item.source);
+  const isYouTube = isYouTubeUrl(item.source);
+  const isDirectVideo = isDirectVideoUrl(item.source);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative rounded-lg overflow-hidden transition-all ${
+        isDragging
+          ? 'opacity-50 scale-105 z-50'
+          : playingIndex === index
+          ? 'ring-2 ring-green-500 shadow-lg shadow-green-500/50'
+          : 'bg-gray-800/50 hover:bg-gray-800/70'
+      }`}
+    >
+      {/* Drag Handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 right-2 z-10 p-2 bg-black/70 rounded cursor-grab active:cursor-grabbing hover:bg-black/80 transition-colors"
+        title="Drag to reorder"
+      >
+        <i className="fas fa-grip-vertical text-gray-400" />
+      </div>
+
+      {/* Thumbnail */}
+      <div className="relative aspect-video bg-gray-900 overflow-hidden">
+        {thumbnailUrl ? (
+          <>
+            {isYouTube ? (
+              <img
+                src={thumbnailUrl}
+                alt={item.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+            ) : isDirectVideo ? (
+              <video
+                src={item.source}
+                className="w-full h-full object-cover"
+                muted
+                preload="metadata"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  video.currentTime = 1; // Seek to 1 second for thumbnail
+                }}
+              />
+            ) : (
+              <img
+                src={thumbnailUrl}
+                alt={item.title}
+                className="w-full h-full object-cover"
+              />
+            )}
+            {/* Play overlay for direct videos */}
+            {isDirectVideo && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <i className="fas fa-play text-4xl text-white opacity-70" />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-900">
+            <i className="fas fa-video text-4xl text-gray-600" />
+          </div>
+        )}
+
+        {/* Position badge */}
+        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">
+          #{index + 1}
+        </div>
+
+        {/* Playing indicator */}
+        {playingIndex === index && (
+          <div className="absolute top-2 right-12 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded flex items-center gap-1">
+            <i className="fas fa-circle text-xs animate-pulse" />
+            Playing
+          </div>
+        )}
+      </div>
+
+      {/* Video Info */}
+      <div className="p-4">
+        <h4
+          className="font-semibold text-white mb-2 overflow-hidden text-ellipsis"
+          style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            lineHeight: '1.5',
+            maxHeight: '3em'
+          }}
+          title={item.title}
+        >
+          {item.title}
+        </h4>
+        <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+          <span className="flex items-center gap-1">
+            {isYouTube && <i className="fab fa-youtube text-red-500" />}
+            {isDirectVideo && <i className="fas fa-file-video" />}
+            {!isYouTube && !isDirectVideo && <i className="fas fa-link" />}
+            {isYouTube ? 'YouTube' : isDirectVideo ? 'Direct Video' : 'URL'}
+          </span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => onPlay(index)}
+            disabled={isPlaying}
+            className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors ${
+              playingIndex === index
+                ? 'bg-green-600 text-white'
+                : 'bg-green-600/80 text-white hover:bg-green-600'
+            } disabled:opacity-50`}
+            title="Play on Kiosk"
+          >
+            <i className="fas fa-play" />
+            <span>Play</span>
+          </button>
+          <button
+            onClick={() => onDelete(item.id)}
+            disabled={deletingId === item.id}
+            className="px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg disabled:opacity-50 transition-colors"
+            title="Delete"
+          >
+            <i className="fas fa-trash" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface MediaPlaylistProps {
   media: MediaItem[];
@@ -21,6 +211,59 @@ export default function MediaPlaylist({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [localMedia, setLocalMedia] = useState<MediaItem[]>(media);
+
+  // Update local media when props change
+  useEffect(() => {
+    setLocalMedia(media);
+  }, [media]);
+
+  // Set up sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = localMedia.findIndex((item) => item.id === active.id);
+      const newIndex = localMedia.findIndex((item) => item.id === over.id);
+
+      const reorderedMedia = arrayMove(localMedia, oldIndex, newIndex);
+      setLocalMedia(reorderedMedia);
+
+      // Update order in database
+      const mediaIds = reorderedMedia.map(item => item.id);
+      updateMediaOrder(mediaIds);
+    }
+  }
+
+  // Update media order in database
+  const updateMediaOrder = async (mediaIds: number[]) => {
+    try {
+      const response = await fetch('/api/media', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mediaIds }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update media order');
+      }
+
+      console.log('✅ Media order updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating media order:', error);
+      // Revert local changes on error
+      setLocalMedia(media);
+      alert('Failed to update media order. Please try again.');
+    }
+  };
 
   // Auto-generate title from URL when URL changes
   const handleUrlChange = (url: string) => {
@@ -212,133 +455,31 @@ export default function MediaPlaylist({
             <p>No videos in playlist</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {media.map((item, index) => {
-              const thumbnailUrl = getVideoThumbnail(item.source);
-              const isYouTube = isYouTubeUrl(item.source);
-              const isDirectVideo = isDirectVideoUrl(item.source);
-              
-              return (
-                <div
-                  key={item.id}
-                  className={`relative rounded-lg overflow-hidden transition-all ${
-                    playingIndex === index
-                      ? 'ring-2 ring-green-500 shadow-lg shadow-green-500/50'
-                      : 'bg-gray-800/50 hover:bg-gray-800/70'
-                  }`}
-                >
-                  {/* Thumbnail */}
-                  <div className="relative aspect-video bg-gray-900 overflow-hidden">
-                    {thumbnailUrl ? (
-                      <>
-                        {isYouTube ? (
-                          <img
-                            src={thumbnailUrl}
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                        ) : isDirectVideo ? (
-                          <video
-                            src={item.source}
-                            className="w-full h-full object-cover"
-                            muted
-                            preload="metadata"
-                            onLoadedMetadata={(e) => {
-                              const video = e.currentTarget;
-                              video.currentTime = 1; // Seek to 1 second for thumbnail
-                            }}
-                          />
-                        ) : (
-                          <img
-                            src={thumbnailUrl}
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                        {/* Play overlay for direct videos */}
-                        {isDirectVideo && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <i className="fas fa-play text-4xl text-white opacity-70" />
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-900">
-                        <i className="fas fa-video text-4xl text-gray-600" />
-                      </div>
-                    )}
-                    
-                    {/* Position badge */}
-                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">
-                      #{index + 1}
-                    </div>
-                    
-                    {/* Playing indicator */}
-                    {playingIndex === index && (
-                      <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded flex items-center gap-1">
-                        <i className="fas fa-circle text-xs animate-pulse" />
-                        Playing
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Video Info */}
-                  <div className="p-4">
-                    <h4 
-                      className="font-semibold text-white mb-2 overflow-hidden text-ellipsis" 
-                      style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        lineHeight: '1.5',
-                        maxHeight: '3em'
-                      }}
-                      title={item.title}
-                    >
-                      {item.title}
-                    </h4>
-                    <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
-                      <span className="flex items-center gap-1">
-                        {isYouTube && <i className="fab fa-youtube text-red-500" />}
-                        {isDirectVideo && <i className="fas fa-file-video" />}
-                        {!isYouTube && !isDirectVideo && <i className="fas fa-link" />}
-                        {isYouTube ? 'YouTube' : isDirectVideo ? 'Direct Video' : 'URL'}
-                      </span>
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handlePlayOnKiosk(index)}
-                        disabled={isPlaying}
-                        className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors ${
-                          playingIndex === index
-                            ? 'bg-green-600 text-white'
-                            : 'bg-green-600/80 text-white hover:bg-green-600'
-                        } disabled:opacity-50`}
-                        title="Play on Kiosk"
-                      >
-                        <i className="fas fa-play" />
-                        <span>Play</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        disabled={deletingId === item.id}
-                        className="px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg disabled:opacity-50 transition-colors"
-                        title="Delete"
-                      >
-                        <i className="fas fa-trash" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={localMedia.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {localMedia.map((item, index) => (
+                  <SortableMediaCard
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    playingIndex={playingIndex}
+                    isPlaying={isPlaying}
+                    deletingId={deletingId}
+                    onPlay={handlePlayOnKiosk}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>
