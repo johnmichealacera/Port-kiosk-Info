@@ -66,3 +66,52 @@ export function isDirectVideoUrl(url: string): boolean {
   return /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url);
 }
 
+/**
+ * Extracts YouTube video ID from various YouTube URL formats
+ */
+export function getYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+
+  // Format: https://www.youtube.com/watch?v=VIDEO_ID
+  const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+  if (watchMatch) {
+    return watchMatch[1];
+  }
+
+  // Format: https://www.youtube.com/embed/VIDEO_ID
+  const embedMatch = url.match(/youtube\.com\/embed\/([^&\n?#]+)/);
+  if (embedMatch) {
+    return embedMatch[1];
+  }
+
+  return null;
+}
+
+/**
+ * Gets YouTube thumbnail URL for a video
+ * Quality options: maxresdefault, hqdefault, mqdefault, sddefault, default
+ */
+export function getYouTubeThumbnail(url: string, quality: 'maxresdefault' | 'hqdefault' | 'mqdefault' | 'sddefault' | 'default' = 'hqdefault'): string | null {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) return null;
+  
+  return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+}
+
+/**
+ * Gets a thumbnail URL for any video source
+ * For YouTube: returns YouTube thumbnail
+ * For direct video URLs: returns the video URL itself (browser will generate thumbnail)
+ */
+export function getVideoThumbnail(url: string): string | null {
+  if (!url) return null;
+  
+  if (isYouTubeUrl(url)) {
+    return getYouTubeThumbnail(url, 'hqdefault');
+  }
+  
+  // For direct video URLs, we'll use the video URL itself
+  // The browser can generate a thumbnail from it
+  return url;
+}
+

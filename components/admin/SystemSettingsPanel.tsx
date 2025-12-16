@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SystemSettings, Theme } from '@/types';
 
 interface SystemSettingsPanelProps {
@@ -16,6 +16,11 @@ export default function SystemSettingsPanel({
 }: SystemSettingsPanelProps) {
   const [formData, setFormData] = useState<SystemSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sync formData when settings prop changes
+  useEffect(() => {
+    setFormData(settings);
+  }, [settings]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,22 +57,58 @@ export default function SystemSettingsPanel({
               <label className="block text-sm font-medium mb-2">System Name</label>
               <input
                 type="text"
-                value={formData.systemName}
+                value={formData.systemName || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, systemName: e.target.value })
                 }
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                placeholder="Enter system name (e.g., Socorro Feeder Port)"
               />
+              <p className="text-xs text-gray-400 mt-1">
+                This name will be displayed in the kiosk header
+              </p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Logo URL</label>
-              <input
-                type="url"
-                value={formData.logo}
-                onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                placeholder="https://example.com/logo.png"
-              />
+              <label className="block text-sm font-medium mb-2">Logo</label>
+              <div className="space-y-3">
+                <input
+                  type="url"
+                  value={formData.logo || ''}
+                  onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                  placeholder="https://example.com/logo.png"
+                />
+                <p className="text-xs text-gray-400">
+                  Enter a URL to your logo image. The logo will appear in the top left of the kiosk display.
+                </p>
+                {formData.logo && (
+                  <div className="mt-3 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                    <p className="text-xs text-gray-400 mb-2">Preview:</p>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={formData.logo}
+                        alt="Logo preview"
+                        className="w-16 h-16 object-contain rounded-lg bg-gray-900 p-2 border border-gray-700"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'text-red-400 text-xs';
+                            errorDiv.textContent = 'Failed to load image. Please check the URL.';
+                            parent.appendChild(errorDiv);
+                          }
+                        }}
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{formData.systemName || 'System Name'}</p>
+                        <p className="text-xs text-gray-400">As it will appear in kiosk</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
