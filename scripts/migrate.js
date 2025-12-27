@@ -240,9 +240,10 @@ async function migrate() {
     // Insert default settings
     await client.query(`
       INSERT INTO system_settings (setting_key, setting_value)
-      VALUES 
+      VALUES
         ('system_name', 'Socorro Feeder Port'),
         ('logo', ''),
+        ('port_office_number', '+63 123 456 7890'),
         ('boarding_time', '30'),
         ('last_call_time', '5'),
         ('fade_interval', '5'),

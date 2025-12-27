@@ -6,6 +6,7 @@ import { SystemSettings } from '@/types';
 const SETTING_KEY_MAP: Record<string, string> = {
   systemName: 'system_name',
   logo: 'logo',
+  portOfficeNumber: 'port_office_number',
   boardingTime: 'boarding_time',
   lastCallTime: 'last_call_time',
   fadeInterval: 'fade_interval',

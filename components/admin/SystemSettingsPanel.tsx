@@ -110,6 +110,19 @@ export default function SystemSettingsPanel({
                 )}
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Port Office Phone Number</label>
+              <input
+                type="tel"
+                value={formData.portOfficeNumber || ''}
+                onChange={(e) => setFormData({ ...formData, portOfficeNumber: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                placeholder="+63 123 456 7890"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                This phone number will be prominently displayed in the kiosk footer for visitors to contact the port office.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -165,8 +178,8 @@ export default function SystemSettingsPanel({
           </div>
         </div>
 
-        {/* Theme Settings */}
-        <div>
+        {/* Theme Settings - commented for now */}
+        {/* <div>
           <h3 className="text-lg font-semibold mb-4">Theme Settings</h3>
           <div className="space-y-2">
             {THEMES.map((theme) => (
@@ -192,7 +205,7 @@ export default function SystemSettingsPanel({
               </label>
             ))}
           </div>
-        </div>
+        </div> */}
 
         <div className="flex justify-end">
           <button

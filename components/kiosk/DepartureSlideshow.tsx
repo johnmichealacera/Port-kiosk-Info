@@ -26,16 +26,6 @@ export default function DepartureSlideshow({
     return null;
   }
 
-  // Filter out cancelled schedules
-  const activeSchedules = schedules.filter((s) => s.status !== 'Cancelled');
-
-  if (activeSchedules.length === 0) {
-    return null;
-  }
-
-  // Duplicate schedules for seamless infinite scroll
-  const duplicatedSchedules = [...activeSchedules, ...activeSchedules, ...activeSchedules];
-
   return (
     <div className="w-full bg-gray-900/90 backdrop-blur-md border-t border-gray-700 overflow-hidden shadow-lg">
       {/* Top Row - Clockwise (Left to Right) - 4 trips */}
@@ -46,7 +36,7 @@ export default function DepartureSlideshow({
         <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-gray-900/95 to-transparent z-10 pointer-events-none" />
 
         <div className="absolute inset-0 flex animate-scroll-right">
-          {duplicatedSchedules.map((schedule, idx) => {
+          {schedules.map((schedule, idx) => {
             const [departure, arrival] = schedule.timeDisplay.split(' - ');
             const status = calculateScheduleStatus(schedule, boardingTime, lastCallTime);
 
@@ -92,7 +82,7 @@ export default function DepartureSlideshow({
         <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-gray-900/95 to-transparent z-10 pointer-events-none" />
 
         <div className="absolute inset-0 flex animate-scroll-left">
-          {duplicatedSchedules.map((schedule, idx) => {
+          {schedules.map((schedule, idx) => {
             const [departure, arrival] = schedule.timeDisplay.split(' - ');
             const status = calculateScheduleStatus(schedule, boardingTime, lastCallTime);
 

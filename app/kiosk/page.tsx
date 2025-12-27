@@ -33,10 +33,10 @@ export default function KioskPage() {
     // Initial fetch
     fetchKioskData(id);
     
-    // Fetch all data every 30 seconds (schedules, media, settings)
+    // Fetch all data more frequently to catch status updates
     fullIntervalRef.current = setInterval(() => {
       fetchKioskData(id);
-    }, 30000);
+    }, 10000); // Check every 10 seconds instead of 30
 
     // Check for video control updates every 1.5 seconds for immediate response
     videoControlIntervalRef.current = setInterval(() => {
@@ -57,20 +57,21 @@ export default function KioskPage() {
 
   const fetchKioskData = async (id: string = kioskId) => {
     try {
-      const response = await fetch(`/api/kiosk?kioskId=${id}`);
+      // Add timestamp to prevent caching
+      const timestamp = Date.now();
+      const response = await fetch(`/api/kiosk?kioskId=${id}&t=${timestamp}`);
       const data = await response.json();
       
       console.log('📊 Kiosk data received:', {
         schedulesCount: data.schedules?.length || 0,
-        schedules: data.schedules,
-        mediaCount: data.media?.length || 0,
-        media: data.media?.map((m: any, idx: number) => ({
-          index: idx,
-          title: m.title,
-          isAd: m.isAd,
-          campaignId: m.adCampaignId,
+        schedules: data.schedules?.map((s: any) => ({
+          id: s.id,
+          vessel: s.vessel,
+          status: s.status,
+          realTimeStatus: s.realTimeStatus,
         })),
-        adsCount: data.media?.filter((m: any) => m.isAd).length || 0,
+        mediaCount: data.media?.length || 0,
+        timestamp: new Date().toISOString(),
       });
       
       setSchedules(data.schedules || []);
@@ -141,6 +142,12 @@ export default function KioskPage() {
       >
         Fullscreen
       </button>
+      <button
+        onClick={() => fetchKioskData(kioskId)}
+        className="fixed top-3 right-20 z-20 px-3 py-1.5 text-xs rounded-md bg-blue-600/80 border border-blue-500 text-white hover:bg-blue-500 transition"
+      >
+        Refresh
+      </button>
       <main className="flex-1 flex overflow-hidden">
         <div className="w-80">
           <ScheduleSlideshow
@@ -168,7 +175,7 @@ export default function KioskPage() {
         lastCallTime={parseInt(settings.last_call_time) || 5}
       />
 
-      <KioskFooter />
+      <KioskFooter portOfficeNumber={settings.port_office_number} />
     </div>
   );
 }

@@ -78,6 +78,14 @@ export default function ScheduleForm({ onCreated, onUpdated, schedule }: Schedul
         setStatus('Ontime');
       }
 
+      // Show success message with kiosk update info
+      const criticalStatuses = ['Cancelled', 'Delayed'];
+      const isCriticalUpdate = criticalStatuses.includes(status);
+      const message = schedule
+        ? `Schedule updated successfully!${isCriticalUpdate ? ' Status will appear on kiosk within 10 seconds.' : ''}`
+        : 'Schedule created successfully!';
+
+      alert(message);
       schedule ? onUpdated() : onCreated();
     } catch (error) {
       console.error('Error saving schedule:', error);

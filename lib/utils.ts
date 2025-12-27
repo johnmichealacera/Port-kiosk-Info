@@ -48,17 +48,25 @@ export function calculateScheduleStatus(
   boardingTime: number,
   lastCallTime: number
 ): string {
+  // Manually set statuses should always take precedence
+  const manualStatuses = ['Cancelled', 'Delayed'];
+  if (manualStatuses.includes(schedule.status)) {
+    return schedule.status;
+  }
+
+  // Calculate real-time status based on time
   const [departureTime] = schedule.timeDisplay.split(' - ');
   const diffMinutes = getTimeDifferenceInMinutes(departureTime);
 
-  if (diffMinutes <= 0 && diffMinutes > -lastCallTime) {
+  if (diffMinutes > 0 && diffMinutes <= lastCallTime) {
     return 'Last Called';
-  } else if (diffMinutes > 0 && diffMinutes <= boardingTime) {
+  } else if (diffMinutes > lastCallTime && diffMinutes <= boardingTime) {
     return 'Boarding';
-  } else if (diffMinutes <= -lastCallTime) {
+  } else if (diffMinutes <= 0) {
     return 'Departed';
   }
 
-  return schedule.status;
+  // Default to On Time if no time-based status applies
+  return 'Ontime';
 }
 

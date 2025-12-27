@@ -22,6 +22,7 @@ export interface Schedule {
   departureTime: string;
   arrivalTime: string;
   timeDisplay: string;
+  time_display?: string;
   vessel: string;
   destination: string;
   status: ScheduleStatus;
@@ -52,6 +53,7 @@ export interface VideoControl {
 export interface SystemSettings {
   systemName: string;
   logo: string;
+  portOfficeNumber: string;
   boardingTime: number;
   lastCallTime: number;
   fadeInterval: number;

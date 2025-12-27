@@ -130,8 +130,15 @@ export default function AdminPage() {
                   : 'text-gray-300 hover:bg-gray-800'
               }`}
             >
-              <i className="fas fa-building mr-3" />
-              Advertisers
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center">
+                  <i className="fas fa-building mr-3" />
+                  <span>Advertisers</span>
+                </div>
+                <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-medium">
+                  Experimental
+                </span>
+              </div>
             </button>
             <button
               onClick={() => setActiveTab('campaigns')}
@@ -141,8 +148,15 @@ export default function AdminPage() {
                   : 'text-gray-300 hover:bg-gray-800'
               }`}
             >
-              <i className="fas fa-bullhorn mr-3" />
-              Campaigns
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center">
+                  <i className="fas fa-bullhorn mr-3" />
+                  <span>Ad Campaigns</span>
+                </div>
+                <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-medium">
+                  Experimental
+                </span>
+              </div>
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
@@ -152,8 +166,15 @@ export default function AdminPage() {
                   : 'text-gray-300 hover:bg-gray-800'
               }`}
             >
-              <i className="fas fa-chart-line mr-3" />
-              Ad Analytics
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center">
+                  <i className="fas fa-chart-line mr-3" />
+                  <span>Ad Analytics</span>
+                </div>
+                <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-medium">
+                  Experimental
+                </span>
+              </div>
             </button>
           </div>
 
@@ -213,18 +234,60 @@ export default function AdminPage() {
 
           {activeTab === 'advertisers' && (
             <div>
+              <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <i className="fas fa-exclamation-triangle text-orange-500 mt-0.5" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-orange-400 mb-2">Experimental Feature</h3>
+                    <p className="text-gray-300 text-sm mb-2">
+                      The Advertisers management system is currently in experimental stage. Some features may not work as expected or could contain bugs.
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      <strong>Issues, bugs, and feedback are greatly appreciated!</strong> Please report any problems you encounter.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <AdvertiserManagement />
             </div>
           )}
 
           {activeTab === 'campaigns' && (
             <div>
+              <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <i className="fas fa-exclamation-triangle text-orange-500 mt-0.5" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-orange-400 mb-2">Experimental Feature</h3>
+                    <p className="text-gray-300 text-sm mb-2">
+                      The Ad Campaigns management system is currently in experimental stage. Some features may not work as expected or could contain bugs.
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      <strong>Issues, bugs, and feedback are greatly appreciated!</strong> Please report any problems you encounter.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <CampaignManagement />
             </div>
           )}
 
           {activeTab === 'analytics' && (
             <div>
+              <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <i className="fas fa-exclamation-triangle text-orange-500 mt-0.5" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-orange-400 mb-2">Experimental Feature</h3>
+                    <p className="text-gray-300 text-sm mb-2">
+                      The Ad Analytics system is currently in experimental stage. Some features may not work as expected or could contain bugs.
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      <strong>Issues, bugs, and feedback are greatly appreciated!</strong> Please report any problems you encounter.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <AdAnalytics />
             </div>
           )}

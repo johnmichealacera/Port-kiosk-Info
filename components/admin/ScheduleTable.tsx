@@ -96,7 +96,7 @@ export default function ScheduleTable({
           {schedules.map((schedule) => (
             <tr key={schedule.id} className="hover:bg-gray-800/30">
               <td className="px-6 py-4 text-sm">{schedule.days.join(', ')}</td>
-              <td className="px-6 py-4 text-sm">{schedule.timeDisplay}</td>
+              <td className="px-6 py-4 text-sm">{schedule.time_display}</td>
               <td className="px-6 py-4 text-sm">{schedule.vessel}</td>
               <td className="px-6 py-4 text-sm">{schedule.destination}</td>
               <td className="px-6 py-4">

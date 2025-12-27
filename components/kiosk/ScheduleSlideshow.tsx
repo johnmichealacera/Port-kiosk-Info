@@ -97,8 +97,8 @@ export default function ScheduleSlideshow({
     return (
       <div className="h-full flex flex-col bg-gray-900/30 border-r border-gray-700">
         {/* Header Section */}
-        <div className="p-4 border-b border-gray-700 bg-gray-900/50">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 border-b border-gray-700 bg-gray-900/50">
+          <div className="flex items-center gap-3 mb-2">
             {logo && (
               <img
                 src={logo}
@@ -119,11 +119,11 @@ export default function ScheduleSlideshow({
         </div>
 
         {/* Weather Section for Empty State */}
-        <div className="p-4 border-b border-gray-700 bg-gray-900/40">
-          <div className="glass-container rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <i className="fas fa-cloud-sun text-2xl text-yellow-400" />
+        <div className="p-2 border-b border-gray-700 bg-gray-900/40">
+          <div className="glass-container rounded-lg p-2">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5">
+                <i className="fas fa-cloud-sun text-xl text-yellow-400" />
                 <div>
                   <div className="text-lg font-bold">28°C</div>
                   <div className="text-xs text-gray-400">Partly Cloudy</div>
@@ -134,7 +134,7 @@ export default function ScheduleSlideshow({
                 <div className="text-sm font-semibold">15 km/h</div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-700 text-xs">
+            <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-700 text-xs">
               <div>
                 <div className="text-gray-400">Wave Height</div>
                 <div className="font-semibold">0.5m</div>
@@ -168,8 +168,8 @@ export default function ScheduleSlideshow({
   return (
     <div className="h-full flex flex-col bg-gray-900/30 border-r border-gray-700">
       {/* Header Section */}
-      <div className="p-4 border-b border-gray-700 bg-gray-900/50">
-        <div className="flex items-center gap-3 mb-3">
+      <div className="p-2 border-b border-gray-700 bg-gray-900/50">
+        <div className="flex items-center gap-3 mb-2">
           {logo && (
             <img
               src={logo}
@@ -179,22 +179,14 @@ export default function ScheduleSlideshow({
           )}
           <h1 className="text-lg font-bold">{systemName}</h1>
         </div>
-        <div className="flex justify-between items-center text-xs">
-          <div className="text-gray-400">{formattedDate}</div>
-          {mounted ? (
-            <div className="text-base font-semibold">{formattedTime}</div>
-          ) : (
-            <div className="text-base font-semibold">--:--:-- --</div>
-          )}
-        </div>
       </div>
 
       {/* Weather Section */}
-      <div className="p-4 border-b border-gray-700 bg-gray-900/40">
-        <div className="glass-container rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <i className="fas fa-cloud-sun text-2xl text-yellow-400" />
+      <div className="p-2 border-b border-gray-700 bg-gray-900/40">
+        <div className="glass-container rounded-lg p-2">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <i className="fas fa-cloud-sun text-xl text-yellow-400" />
               <div>
                 <div className="text-lg font-bold">28°C</div>
                 <div className="text-xs text-gray-400">Partly Cloudy</div>
@@ -205,7 +197,7 @@ export default function ScheduleSlideshow({
               <div className="text-sm font-semibold">15 km/h</div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-700 text-xs">
+          <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-700 text-xs">
             <div>
               <div className="text-gray-400">Wave Height</div>
               <div className="font-semibold">0.5m</div>
@@ -219,9 +211,9 @@ export default function ScheduleSlideshow({
       </div>
 
       {/* Current Schedule Display */}
-      <div className="flex-1 p-4 flex flex-col min-h-0">
-        <div 
-          className={`glass-container rounded-lg p-6 flex-1 flex flex-col justify-between transition-all duration-500 ${
+      <div className="flex-1 p-2 flex flex-col min-h-0">
+        <div
+          className={`glass-container rounded-lg p-4 flex-1 flex flex-col justify-between transition-all duration-500 ${
             isTransitioning 
               ? 'opacity-0 scale-95 transform translate-x-4' 
               : 'opacity-100 scale-100 transform translate-x-0 shadow-lg shadow-blue-500/20 border-2 border-blue-500/30'
@@ -260,6 +252,11 @@ export default function ScheduleSlideshow({
             <div className="text-xs text-gray-400 uppercase mb-2">Upcoming Trips</div>
             {nextSchedules.slice(0, 3).map((schedule, idx) => {
               const [nextDep] = schedule.timeDisplay.split(' - ');
+              const itemRealTimeStatus = calculateScheduleStatus(
+                schedule,
+                boardingTime,
+                lastCallTime
+              );
               return (
                 <div
                   key={schedule.id}
@@ -268,9 +265,11 @@ export default function ScheduleSlideshow({
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="font-semibold">{nextDep}</span>
-                      <span className="text-gray-400 ml-2">{schedule.vessel}</span>
+                      <span className="text-gray-400 mx-2">{schedule.vessel}</span>
+                      -
+                      <span className="text-gray-400 ml-2">{schedule.destination}</span>
                     </div>
-                    <StatusBadge status={calculateScheduleStatus(schedule, boardingTime, lastCallTime)} />
+                    <StatusBadge status={itemRealTimeStatus} />
                   </div>
                 </div>
               );
