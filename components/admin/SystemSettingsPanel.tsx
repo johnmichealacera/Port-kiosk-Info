@@ -71,13 +71,13 @@ export default function SystemSettingsPanel({
             <div>
               <label className="block text-sm font-medium mb-2">Logo</label>
               <div className="space-y-3">
-                <input
-                  type="url"
+              <input
+                type="url"
                   value={formData.logo || ''}
-                  onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
                   className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  placeholder="https://example.com/logo.png"
-                />
+                placeholder="https://example.com/logo.png"
+              />
                 <p className="text-xs text-gray-400">
                   Enter a URL to your logo image. The logo will appear in the top left of the kiosk display.
                 </p>

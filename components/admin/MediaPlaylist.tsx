@@ -459,7 +459,7 @@ export default function MediaPlaylist({
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
-          >
+              >
             <SortableContext
               items={localMedia.map(item => item.id)}
               strategy={verticalListSortingStrategy}
@@ -477,7 +477,7 @@ export default function MediaPlaylist({
                     onDelete={handleDelete}
                   />
                 ))}
-              </div>
+                </div>
             </SortableContext>
           </DndContext>
         )}
