@@ -48,13 +48,13 @@ export default function VideoPlayer({
     return match ? match[1] : null;
   }, []);
 
-  // Estimate video duration (30-60 seconds for ads/kiosk content typically)
+  // Estimate video duration (fallback only - actual duration will be fetched)
   const estimateVideoDuration = useCallback((video: MediaItemWithAd): number => {
     // For ads, typically 15-30 seconds
     if (video.isAd) return 20;
-    // For regular content, typically 30-60 seconds
-    // You could fetch actual duration from YouTube API if needed
-    return 30;
+    // For regular content, use a safe default (5 minutes) until actual duration is fetched
+    // Actual duration will be fetched from video metadata or YouTube API
+    return 300; // 5 minutes default - will be replaced with actual duration
   }, []);
 
   // Sync control settings from server (but not autoplay state)
@@ -237,6 +237,7 @@ export default function VideoPlayer({
 
     // Cleanup function
     return () => {
+      // Clear progress check interval if it exists (though we're not using it anymore)
       if (progressCheckIntervalRef.current) {
         clearInterval(progressCheckIntervalRef.current);
         progressCheckIntervalRef.current = null;
@@ -245,46 +246,9 @@ export default function VideoPlayer({
 
   }, [currentIndex, media, trackImpression, estimateVideoDuration]);
 
-  // Separate effect for progress monitoring to avoid circular dependency
-  useEffect(() => {
-    if (!media.length || !media[currentIndex]) return;
-    
-    const currentVideo = media[currentIndex];
-    const source = currentVideo.source;
-    
-    // Clear any existing progress check interval
-    if (progressCheckIntervalRef.current) {
-      clearInterval(progressCheckIntervalRef.current);
-      progressCheckIntervalRef.current = null;
-    }
-
-    // For YouTube videos, set up progress monitoring
-    if (isYouTubeUrl(source) && !isLooping) {
-      console.log('⏱️ Setting up progress monitoring for YouTube video');
-      
-      // Check every second if the video should have ended
-      progressCheckIntervalRef.current = setInterval(() => {
-        if (!videoStartTimeRef.current) return;
-        
-        const elapsed = (Date.now() - videoStartTimeRef.current) / 1000;
-        const duration = videoDurationRef.current;
-        
-        // Add 2 second buffer to account for loading time
-        if (elapsed >= duration + 2) {
-          console.log(`⏰ Video duration exceeded (${elapsed.toFixed(1)}s / ${duration}s), moving to next`);
-          handleEnded();
-        }
-      }, 1000);
-    }
-
-    // Cleanup function
-    return () => {
-      if (progressCheckIntervalRef.current) {
-        clearInterval(progressCheckIntervalRef.current);
-        progressCheckIntervalRef.current = null;
-      }
-    };
-  }, [currentIndex, media, isLooping, handleEnded]);
+  // Note: YouTube duration fetching via postMessage is limited
+  // We rely on native ENDED events instead, which is more reliable
+  // Duration is tracked for logging purposes only
 
   // Helper function to get the current video source
   const getCurrentVideoSource = () => {
@@ -326,13 +290,8 @@ export default function VideoPlayer({
           
           switch(data.info) {
             case YT_STATE.ENDED:
-              console.log('🎬 YouTube video ended via API');
+              console.log('🎬 YouTube video ended via API - video completed naturally');
               if (!isLooping) {
-                // Clear the progress interval since we got a proper end event
-                if (progressCheckIntervalRef.current) {
-                  clearInterval(progressCheckIntervalRef.current);
-                  progressCheckIntervalRef.current = null;
-                }
                 handleEnded();
               }
               break;
@@ -375,7 +334,16 @@ export default function VideoPlayer({
         
         // Listen for initial ready event
         if (data.event === 'initialDelivery' || data.event === 'onReady') {
-          console.log('✅ YouTube player ready');
+          console.log('✅ YouTube player ready - will rely on ENDED event for completion');
+        }
+        
+        // Listen for infoDelivery event which may contain video duration (if available)
+        if (data.event === 'infoDelivery' && data.info && typeof data.info.duration === 'number') {
+          const actualDuration = data.info.duration;
+          console.log(`📏 YouTube video duration received: ${actualDuration.toFixed(1)}s`);
+          if (actualDuration > 0 && !isNaN(actualDuration)) {
+            videoDurationRef.current = actualDuration;
+          }
         }
       } catch (e) {
         // Not a JSON message, ignore silently
