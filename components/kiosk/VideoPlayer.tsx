@@ -41,6 +41,9 @@ export default function VideoPlayer({
   const progressCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoplayRetryCountRef = useRef<number>(0);
   const maxAutoplayRetries = 3;
+  const unmuteAttemptsRef = useRef<number>(0);
+  const maxUnmuteAttempts = 10; // Try unmuting up to 10 times
+  const unmuteIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper to extract YouTube video ID
   const getYouTubeVideoId = useCallback((url: string): string | null => {
@@ -304,22 +307,35 @@ export default function VideoPlayer({
               }
 
               // Unmute YouTube video after it starts playing to enable audio
-              setTimeout(() => {
+              // Use a small delay to ensure playback has started
+              const unmuteYouTube = () => {
                 if (iframeRef.current) {
                   console.log('🔊 Unmuting YouTube video after autoplay started');
-                  iframeRef.current.contentWindow?.postMessage(
-                    '{"event":"command","func":"unMute","args":""}',
-                    'https://www.youtube.com'
-                  );
-                  // Set volume after unmuting
-                  setTimeout(() => {
-                    iframeRef.current?.contentWindow?.postMessage(
-                      `{"event":"command","func":"setVolume","args":[${volume}]}`,
+                  try {
+                    // Unmute first
+                    iframeRef.current.contentWindow?.postMessage(
+                      '{"event":"command","func":"unMute","args":""}',
                       'https://www.youtube.com'
                     );
-                  }, 100);
+                    // Set volume after unmuting (with retry for reliability)
+                    setTimeout(() => {
+                      if (iframeRef.current) {
+                        iframeRef.current.contentWindow?.postMessage(
+                          `{"event":"command","func":"setVolume","args":[${volume}]}`,
+                          'https://www.youtube.com'
+                        );
+                        console.log(`🔊 YouTube volume set to ${volume}%`);
+                      }
+                    }, 200);
+                  } catch (error) {
+                    console.error('Error unmuting YouTube video:', error);
+                  }
                 }
-              }, 500);
+              };
+              
+              // Try unmuting immediately, then retry after a short delay for reliability
+              unmuteYouTube();
+              setTimeout(unmuteYouTube, 1000);
               break;
             
             case YT_STATE.PAUSED:
@@ -335,6 +351,25 @@ export default function VideoPlayer({
         // Listen for initial ready event
         if (data.event === 'initialDelivery' || data.event === 'onReady') {
           console.log('✅ YouTube player ready - will rely on ENDED event for completion');
+          // Backup unmute attempt: ensure video is unmuted when player is ready
+          // This handles cases where PLAYING state might not fire immediately
+          setTimeout(() => {
+            if (iframeRef.current) {
+              console.log('🔊 Backup unmute: YouTube player ready, ensuring unmuted');
+              iframeRef.current.contentWindow?.postMessage(
+                '{"event":"command","func":"unMute","args":""}',
+                'https://www.youtube.com'
+              );
+              setTimeout(() => {
+                if (iframeRef.current) {
+                  iframeRef.current.contentWindow?.postMessage(
+                    `{"event":"command","func":"setVolume","args":[${volume}]}`,
+                    'https://www.youtube.com'
+                  );
+                }
+              }, 200);
+            }
+          }, 2000);
         }
         
         // Listen for infoDelivery event which may contain video duration (if available)
@@ -353,6 +388,61 @@ export default function VideoPlayer({
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [isCurrentVideoYouTube, isLooping, handleEnded, volume]);
+
+  // Aggressive unmute strategy for YouTube videos
+  useEffect(() => {
+    if (!isCurrentVideoYouTube || !iframeRef.current) return;
+
+    console.log('🔊 Starting aggressive unmute strategy for YouTube video');
+    unmuteAttemptsRef.current = 0;
+
+    const attemptUnmute = () => {
+      if (!iframeRef.current || unmuteAttemptsRef.current >= maxUnmuteAttempts) {
+        if (unmuteIntervalRef.current) {
+          clearInterval(unmuteIntervalRef.current);
+          unmuteIntervalRef.current = null;
+        }
+        return;
+      }
+
+      unmuteAttemptsRef.current++;
+      console.log(`🔊 Attempting to unmute YouTube video (attempt ${unmuteAttemptsRef.current}/${maxUnmuteAttempts})`);
+
+      try {
+        // Unmute command
+        iframeRef.current.contentWindow?.postMessage(
+          '{"event":"command","func":"unMute","args":""}',
+          'https://www.youtube.com'
+        );
+        
+        // Set volume
+        setTimeout(() => {
+          if (iframeRef.current) {
+            iframeRef.current.contentWindow?.postMessage(
+              `{"event":"command","func":"setVolume","args":[${volume}]}`,
+              'https://www.youtube.com'
+            );
+            console.log(`🔊 Volume set to ${volume}%`);
+          }
+        }, 100);
+      } catch (error) {
+        console.error('Error in unmute attempt:', error);
+      }
+    };
+
+    // Start unmuting attempts after iframe loads
+    // Try immediately, then every 2 seconds
+    setTimeout(attemptUnmute, 1000);
+    unmuteIntervalRef.current = setInterval(attemptUnmute, 2000);
+
+    return () => {
+      if (unmuteIntervalRef.current) {
+        clearInterval(unmuteIntervalRef.current);
+        unmuteIntervalRef.current = null;
+      }
+      unmuteAttemptsRef.current = 0;
+    };
+  }, [currentIndex, isCurrentVideoYouTube, volume]);
 
   // YouTube autoplay retry effect
   useEffect(() => {
@@ -414,8 +504,8 @@ export default function VideoPlayer({
             onError={handleError}
             onLoad={() => {
               console.log('📺 YouTube iframe loaded');
+              
               // Start autoplay retry attempts after iframe loads
-              // Try to play via postMessage after a short delay
               setTimeout(() => {
                 if (iframeRef.current) {
                   console.log('🔄 Attempting YouTube autoplay via postMessage');
@@ -425,6 +515,29 @@ export default function VideoPlayer({
                   );
                 }
               }, 1000);
+
+              // Also try to unmute immediately when iframe loads
+              setTimeout(() => {
+                if (iframeRef.current) {
+                  console.log('🔊 Attempting immediate unmute after iframe load');
+                  try {
+                    iframeRef.current.contentWindow?.postMessage(
+                      '{"event":"command","func":"unMute","args":""}',
+                      'https://www.youtube.com'
+                    );
+                    setTimeout(() => {
+                      if (iframeRef.current) {
+                        iframeRef.current.contentWindow?.postMessage(
+                          `{"event":"command","func":"setVolume","args":[${volume}]}`,
+                          'https://www.youtube.com'
+                        );
+                      }
+                    }, 200);
+                  } catch (error) {
+                    console.error('Error unmuting on iframe load:', error);
+                  }
+                }
+              }, 2000);
             }}
           />
         ) : (
@@ -445,23 +558,42 @@ export default function VideoPlayer({
               if (video.duration && !isNaN(video.duration)) {
                 videoDurationRef.current = video.duration;
               }
-              // Set volume when metadata loads
+              // Set volume when metadata loads (video is still muted at this point)
               video.volume = volume / 100;
+              
+              // Backup unmute attempt: if video is already playing when metadata loads
+              // This handles edge cases where onPlay might not fire
+              setTimeout(() => {
+                if (video && !video.paused && video.muted) {
+                  console.log('🔊 Backup unmute: Video is playing but still muted, unmuting now');
+                  video.muted = false;
+                }
+              }, 1000);
             }}
             onPlay={() => {
-              console.log('▶️ Video started playing');
+              console.log('▶️ Direct video started playing');
               if (!videoStartTimeRef.current) {
                 videoStartTimeRef.current = Date.now();
               }
 
               // Unmute after video starts playing to enable audio while preserving autoplay
-              setTimeout(() => {
+              // Use a small delay to ensure playback has started, then unmute
+              const unmuteVideo = () => {
                 if (videoRef.current && videoRef.current.muted) {
-                  console.log('🔊 Unmuting video after autoplay started');
-                  videoRef.current.muted = false;
-                  videoRef.current.volume = volume / 100;
+                  try {
+                    console.log('🔊 Unmuting direct video after autoplay started');
+                    videoRef.current.muted = false;
+                    videoRef.current.volume = volume / 100;
+                    console.log(`🔊 Direct video volume set to ${volume}%`);
+                  } catch (error) {
+                    console.error('Error unmuting video:', error);
+                  }
                 }
-              }, 500);
+              };
+              
+              // Try unmuting immediately, then retry after a short delay for reliability
+              unmuteVideo();
+              setTimeout(unmuteVideo, 500);
             }}
             onPause={() => {
               console.log('⏸️ Video paused');
